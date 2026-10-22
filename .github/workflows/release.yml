@@ -1,0 +1,50 @@
+name: 8:15 release alert
+
+on:
+  schedule:
+    # ~7:25 PT in both PDT (14:25 UTC) and PST (15:25 UTC). The off-season run lands
+    # outside the 7:20–8:30 PT window and exits right away.
+    - cron: "25 14 * * *"
+    - cron: "25 15 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Test: send what's open on this date (YYYY-MM-DD)"
+        required: false
+
+concurrency:
+  group: scanner
+  cancel-in-progress: false
+
+jobs:
+  open:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      OPEN_DAYS: ${{ vars.OPEN_DAYS || 'Mon' }}
+      WATCH_DAYS: ${{ vars.WATCH_DAYS || 'Mon' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache/restore@v4
+        with:
+          path: state.json
+          key: state-${{ github.run_id }}
+          restore-keys: state-
+      - name: Wait for release and notify
+        env:
+          TEST_DATE: ${{ inputs.date }}
+        run: |
+          if [ -n "$TEST_DATE" ]; then
+            python scanner.py open --date "$TEST_DATE"
+          else
+            python scanner.py open
+          fi
+      - uses: actions/cache/save@v4
+        if: always() && hashFiles('state.json') != ''
+        with:
+          path: state.json
+          key: state-${{ github.run_id }}
