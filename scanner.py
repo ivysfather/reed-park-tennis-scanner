@@ -120,9 +120,14 @@ def windows_for(day, earliest_hour, latest_hour):
     return out
 
 
+def is_evening_any_day(d):
+    """Days in EVENING_ANY_DAYS look for any court after EVENING_BM_HOUR."""
+    return DAY_NAMES[d.weekday()] in env_days("EVENING_ANY_DAYS", "")
+
+
 def is_evening_day(d):
-    """Days in EVENING_BM_DAYS only look for ball machine courts after EVENING_BM_HOUR."""
-    return DAY_NAMES[d.weekday()] in env_days("EVENING_BM_DAYS", "")
+    """Days in EVENING_BM_DAYS (ball machine only) or EVENING_ANY_DAYS only look after EVENING_BM_HOUR."""
+    return is_evening_any_day(d) or DAY_NAMES[d.weekday()] in env_days("EVENING_BM_DAYS", "")
 
 
 def scan(dates, earliest_hour, latest_hour):
@@ -140,7 +145,7 @@ def scan(dates, earliest_hour, latest_hour):
             result[key]["status"][court_id] = day["status"]
             day_earliest = earliest_hour
             if is_evening_day(d):
-                if not ball_machine:
+                if not ball_machine and not is_evening_any_day(d):
                     continue
                 day_earliest = max(earliest_hour, evening_hour)
             wins = windows_for(day, day_earliest, latest_hour)
@@ -292,10 +297,11 @@ def run_open(args):
     if is_evening_day(target):
         # Evening-only days alert only when something matches; no daily "nothing open".
         if not result[target.isoformat()]["open"]:
-            log("No ball machine courts open after the evening cutoff; sending nothing.")
+            log("Nothing open after the evening cutoff; sending nothing.")
             save_state_for(result)
             return
-        title += f" (ball machine after {fmt_time(env_hour('EVENING_BM_HOUR', 17) * 60)})"
+        what = "courts" if is_evening_any_day(target) else "ball machine"
+        title += f" ({what} after {fmt_time(env_hour('EVENING_BM_HOUR', 17) * 60)})"
     body, links = build_message(result)
     notify(title, body, links, args.dry_run)
     save_state_for(result)

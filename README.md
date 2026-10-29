@@ -17,6 +17,7 @@ Data comes from the city's public ActiveNet feed. No login needed to check.
   - Secret `NTFY_TOPIC` (required)
   - Variables `OPEN_DAYS`, `WATCH_DAYS` (optional, default `Mon`)
   - Variables `EVENING_BM_DAYS`, `EVENING_BM_HOUR` (optional): days that only look for ball machine courts from that hour on (e.g. `Tue,Wed,Thu,Fri` and `17`). Those days alert only when something matches.
+  - Variable `EVENING_ANY_DAYS` (optional): days that look for any court, not only ball machine, from `EVENING_BM_HOUR` on (e.g. `Wed,Fri`).
 - To test, run either workflow from the Actions tab with **Run workflow**.
 
 **Or locally on a Mac:** copy `.env.example` to `.env`, then `./install.sh` (launchd). The Mac must be awake at 8:14 PT. Don't run both, or you'll get double alerts.

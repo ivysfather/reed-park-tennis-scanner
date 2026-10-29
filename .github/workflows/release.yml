@@ -25,6 +25,7 @@ jobs:
       OPEN_DAYS: ${{ vars.OPEN_DAYS || 'Mon' }}
       WATCH_DAYS: ${{ vars.WATCH_DAYS || 'Mon' }}
       EVENING_BM_DAYS: ${{ vars.EVENING_BM_DAYS }}
+      EVENING_ANY_DAYS: ${{ vars.EVENING_ANY_DAYS }}
       EVENING_BM_HOUR: ${{ vars.EVENING_BM_HOUR || '17' }}
     steps:
       - uses: actions/checkout@v4
