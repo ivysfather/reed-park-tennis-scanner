@@ -120,11 +120,17 @@ def windows_for(day, earliest_hour, latest_hour):
     return out
 
 
+def is_evening_day(d):
+    """Days in EVENING_BM_DAYS only look for ball machine courts after EVENING_BM_HOUR."""
+    return DAY_NAMES[d.weekday()] in env_days("EVENING_BM_DAYS", "")
+
+
 def scan(dates, earliest_hour, latest_hour):
     """Returns {date_str: {"status": {court_id: status}, "open": {court_id: [windows]}}}."""
     start, end = min(dates), max(dates)
     result = {d.isoformat(): {"status": {}, "open": {}} for d in dates}
-    for court_id, _, _ in COURTS:
+    evening_hour = env_hour("EVENING_BM_HOUR", 17)
+    for court_id, _, ball_machine in COURTS:
         days = fetch_days(court_id, start, end)
         for d in dates:
             key = d.isoformat()
@@ -132,7 +138,12 @@ def scan(dates, earliest_hour, latest_hour):
             if not day:
                 continue
             result[key]["status"][court_id] = day["status"]
-            wins = windows_for(day, earliest_hour, latest_hour)
+            day_earliest = earliest_hour
+            if is_evening_day(d):
+                if not ball_machine:
+                    continue
+                day_earliest = max(earliest_hour, evening_hour)
+            wins = windows_for(day, day_earliest, latest_hour)
             if wins:
                 result[key]["open"][court_id] = wins
     return result
@@ -277,8 +288,16 @@ def run_open(args):
     if STATUS_NOT_YET_OPEN in statuses:
         log("Still not open after waiting; sending nothing.")
         return
+    title = f"Reed Park opened for {fmt_date(target)}"
+    if is_evening_day(target):
+        # Evening-only days alert only when something matches; no daily "nothing open".
+        if not result[target.isoformat()]["open"]:
+            log("No ball machine courts open after the evening cutoff; sending nothing.")
+            save_state_for(result)
+            return
+        title += f" (ball machine after {fmt_time(env_hour('EVENING_BM_HOUR', 17) * 60)})"
     body, links = build_message(result)
-    notify(f"Reed Park opened for {fmt_date(target)}", body, links, args.dry_run)
+    notify(title, body, links, args.dry_run)
     save_state_for(result)
 
 
